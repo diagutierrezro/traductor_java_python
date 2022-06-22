@@ -1,0 +1,39 @@
+public class miAplicacion1 {
+    private String color;
+    public boolean test;
+    private int edad;
+    protected float peso;
+    public void suma(int primerDigito, int segundoDigito, int tercerDigito){
+        this.edad = 20;
+        this.peso = 50.6;
+        int sumTotal = primerdigito + segundoDigito * tercerDigito;
+        return sumTotal;
+    }
+
+    public static void main(String[] args) {
+        int a = 0;
+        for (int i = 0; j <= 10; k++) {
+            a += 1;
+            if (a < 8) {
+                String prueba = "hola";
+                int suma = 2 + 3;
+                int resta = 9 - 3;
+                float multi = 3.2 * 6.4;
+                float div = 9 / 2;
+            }
+        }
+        String aux = "Hola";
+        ArrayList<String> Stack = new ArrayList<String>();
+        Stack.push(10);
+        Stack.push(20);
+        Stack.push(30);
+        Stack.remove(1);
+        Stack.remove(String.valueOf(30));
+        String aux1 = Stack.get(0);
+        int len = Stack.length;
+        Scanner sc = new Scanner(System.in);
+        int a = Integer.parseInt(sc.nextLine());
+        int b = Float.parseFloat(sc.nextLine());
+        int c = sc.nextLine();
+    }
+}

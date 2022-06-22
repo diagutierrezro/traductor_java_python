@@ -1,9 +1,10 @@
 import { ErrorNode } from "antlr4ts/tree/ErrorNode";
 import { TerminalNode } from "antlr4ts/tree/TerminalNode";
-import { AdditiveExpressionContext, ArgumentListContext, AssignmentContext, ClassBodyContext, ClassBodyDeclarationContext, ClassDeclarationContext, CompilationUnitContext,
-    ExpressionNameContext, FieldDeclarationContext, FormalParameterContext, FormalParameterListContext, FormalParametersContext, IfThenElseStatementContext,
+import { AdditiveExpressionContext, ArgumentListContext, AssignmentContext, ClassBodyContext, ClassBodyDeclarationContext, CompilationUnitContext,
+    EqualityExpressionContext,
+    ExpressionNameContext, FieldDeclarationContext, FormalParameterContext, FormalParameterListContext, FormalParametersContext, ForStatementContext,
     IfThenStatementContext, Java8Parser, LiteralContext, MethodBodyContext, MethodDeclaratorContext, MethodInvocationContext, MethodInvocation_lfno_primaryContext,
-    MethodNameContext, NormalClassDeclarationContext, ReturnStatementContext, TypeNameContext, UnannClassType_lfno_unannClassOrInterfaceTypeContext,
+    MethodNameContext, MultiplicativeExpressionContext, NormalClassDeclarationContext, RelationalExpressionContext, ReturnStatementContext, TypeNameContext, UnannClassType_lfno_unannClassOrInterfaceTypeContext,
     VariableDeclaratorContext, VariableDeclaratorIdContext } from "Java8Parser";
 
 export class SL2Java {
@@ -37,19 +38,29 @@ export class SL2Java {
     scannerIdentifier: string = "";
     plusOperator: boolean = false;
     numOfAdditiveExpression: number = 0;
+    mulOperator: boolean = false;
+    numOfMulExpression: number = 0;
+    minusOperator: boolean = false;
+    numOfMinusExpression: number = 0;
+    divOperator: boolean = false;
+    numOfDivExpression: number = 0;
     comaOnArguments: boolean = false;
     instanceVariable: boolean = false;
     assignVariable:boolean = false;
+    variableFor: string = "";
+    noAssign:boolean = false;
+    condFor: number = 0;
+    inIf: boolean = false;
 
     constructor() {
     }
 
     enterCompilationUnit(ctx: CompilationUnitContext) {
-        console.log("import math\n");
-        console.log("import random\n");
-        console.log("import psutil\n");
-        console.log("import datetime\n");
-        console.log("import sys\n");
+        this.addToArray("import math\n");
+        this.addToArray("import random\n");
+        this.addToArray("import psutil\n");
+        this.addToArray("import datetime\n");
+        this.addToArray("import sys\n\n");
     }
 
    exitCompilationUnit(ctx: LiteralContext) {
@@ -71,7 +82,18 @@ export class SL2Java {
     }
 
     enterIfThenStatement(ctx: IfThenStatementContext) {
-        this.addToArray("if(");
+        this.inIf = true;
+        var temp = ""
+        for (let index = 0; index < this.numTabs; index++) {
+            temp = temp + "\t"
+        }
+        this.addToArray(temp + "if (");
+        this.numTabs += 1;
+    }
+
+    exitIfThenStatement(ctx: IfThenStatementContext) {
+        this.numTabs -= 1;
+        this.inIf = false;
     }
 
     enterNormalClassDeclaration(ctx: NormalClassDeclarationContext) {
@@ -128,10 +150,12 @@ export class SL2Java {
         for (let index = 0; index < this.numTabs; index++) {
             temp = temp + "\t"
         }
-        if (!this.inArray && !ctx.text.includes("Scanner") && ctx.ASSIGN()){
+        if (!this.inArray && !ctx.text.includes("Scanner") && ctx.ASSIGN() && ctx.variableDeclaratorId().Identifier().text != this.variableFor){
             this.addToArray(temp + ctx.variableDeclaratorId().Identifier().text + " " + ctx.ASSIGN().text + " ");
         } else if (this.instanceVariable) {
             this.addToArray(ctx.variableDeclaratorId().Identifier().text);
+        } else if (this.variableFor) {
+            this.noAssign = true;
         }
     }
 
@@ -139,17 +163,37 @@ export class SL2Java {
         if (!this.inArray && !this.instanceVariable) {
             this.addToArray("\n")
         }
+        this.noAssign = false;
     }
 
     enterLiteral(ctx: LiteralContext) {
-        if (ctx.IntegerLiteral()) {
-            this.addToArray(ctx.IntegerLiteral().text)
-        } else if (ctx.StringLiteral()) {
-            this.addToArray(ctx.StringLiteral().text)
-        } else if (ctx.FloatingPointLiteral().text) {
-            this.addToArray(ctx.FloatingPointLiteral().text)
-        } else if (ctx.BooleanLiteral().text) {
-            this.addToArray(ctx.BooleanLiteral().text)
+        if (!this.noAssign && this.condFor != 0){
+            if (ctx.IntegerLiteral()) {
+                this.addToArray(ctx.IntegerLiteral().text)
+            } else if (ctx.StringLiteral()) {
+                this.addToArray(ctx.StringLiteral().text)
+            } else if (ctx.FloatingPointLiteral().text) {
+                this.addToArray(ctx.FloatingPointLiteral().text)
+            } else if (ctx.BooleanLiteral().text) {
+                this.addToArray(ctx.BooleanLiteral().text)
+            }
+        }
+
+        if (this.plusOperator) {
+            this.addToArray(" + ")
+        }
+        if (this.mulOperator) {
+            this.addToArray(" * ")
+        }
+        if (this.minusOperator) {
+            this.addToArray(" - ")
+        }
+        if (this.divOperator) {
+            this.addToArray(" / ")
+        }
+        if (this.inIf) {
+            this.addToArray("):\n")
+            this.inIf = false;
         }
     }
 
@@ -171,14 +215,43 @@ export class SL2Java {
         if(ctx.ADD() != null){
             this.plusOperator = true;
             this.numOfAdditiveExpression += 1;
+        } 
+        if(ctx.SUB() != null) {
+            this.minusOperator = true;
+            this.numOfMinusExpression += 1;
         }
     }
 
     exitAdditiveExpression(ctx: AdditiveExpressionContext){
         if (this.plusOperator) this.numOfAdditiveExpression -= 1;
-        console.log(this.numOfAdditiveExpression)
         if(this.numOfAdditiveExpression == 0){
             this.plusOperator = false;
+        }
+        if (this.minusOperator) this.numOfMinusExpression -= 1;
+        if(this.numOfMinusExpression == 0){
+            this.minusOperator = false;
+        }
+    }
+
+    enterMultiplicativeExpression(ctx: MultiplicativeExpressionContext){
+        if(ctx.MUL() != null){
+            this.mulOperator = true;
+            this.numOfMulExpression += 1;
+        }
+        if(ctx.DIV() != null) {
+            this.divOperator = true;
+            this.numOfDivExpression += 1;
+        }
+    }
+
+    exitMultiplicativeExpression(ctx: MultiplicativeExpressionContext){
+        if (this.mulOperator) this.numOfMulExpression -= 1;
+        if(this.numOfMulExpression == 0){
+            this.mulOperator = false;
+        }
+        if (this.divOperator) this.numOfDivExpression -= 1;
+        if(this.numOfDivExpression == 0){
+            this.divOperator = false;
         }
     }
 
@@ -218,6 +291,8 @@ export class SL2Java {
             this.removeArray = false;
         } else if (ctx.Identifier().text === "parseInt") {
             this.addToArray("int(")
+        } else if (ctx.Identifier().text === "parseFloat") {
+            this.addToArray("float(")
         } else if (ctx.typeName().text === this.scannerIdentifier) {
         } else {
             this.getArray = true;
@@ -272,7 +347,7 @@ export class SL2Java {
     enterExpressionName (ctx: ExpressionNameContext) {
         if (ctx.Identifier().text === "length"){
             this.addToArray("len(" + ctx.ambiguousName().text + ")")
-        } else if (ctx.Identifier().text !== "in") {
+        } else if (ctx.Identifier().text !== "in" && !this.inFor) {
             var temp = ctx.Identifier().text;
             this.addToArray(temp);
 
@@ -282,6 +357,15 @@ export class SL2Java {
         }
         if (this.plusOperator) {
             this.addToArray(" + ")
+        }
+        if (this.mulOperator) {
+            this.addToArray(" * ")
+        }
+        if (this.minusOperator) {
+            this.addToArray(" - ")
+        }
+        if (this.divOperator) {
+            this.addToArray(" / ")
         }
     }
 
@@ -369,11 +453,72 @@ export class SL2Java {
             temp = temp + "\t"
         }
         this.assignVariable = true;
-        this.addToArray(temp + ctx.leftHandSide().fieldAccess().Identifier().text + " = ")
+        if (!this.inFor) {
+            this.addToArray(temp + ctx.leftHandSide().fieldAccess().Identifier().text + " = ")
+        } else if (this.inFor) {
+            this.addToArray (temp + ctx.leftHandSide().expressionName().Identifier() + " " + ctx.assignmentOperator().text + " ")
+        }
     }
 
     exitAssignment (ctx: AssignmentContext) {
         this.addToArray("\n")
+    }
+
+    enterForStatement(ctx: ForStatementContext) {
+        var temp = ""
+        this.inFor = true;
+        this.condFor = 3;
+        for (let index = 0; index < this.numTabs; index++) {
+            temp = temp + "\t"
+        }
+        this.variableFor = ctx.basicForStatement().forInit().localVariableDeclaration().variableDeclaratorList().variableDeclarator()[0].variableDeclaratorId().Identifier().text
+        var variable = "";
+        var init = "";
+        if(ctx.basicForStatement().forInit().statementExpressionList() != null){
+            variable = ctx.basicForStatement().forInit().statementExpressionList().statementExpression()[0].assignment().leftHandSide().text;
+            init = ctx.basicForStatement().forInit().statementExpressionList().statementExpression()[0].assignment().expression().text;
+        }else{
+            variable = ctx.basicForStatement().forInit().localVariableDeclaration().variableDeclaratorList().variableDeclarator()[0].variableDeclaratorId().text;
+            init = ctx.basicForStatement().forInit().localVariableDeclaration().variableDeclaratorList().variableDeclarator()[0].variableInitializer().text;
+        }
+        var evalu = ctx.basicForStatement().expression().assignmentExpression().conditionalExpression().conditionalOrExpression().conditionalAndExpression().inclusiveOrExpression().exclusiveOrExpression().andExpression().equalityExpression().relationalExpression().shiftExpression().text;
+        var update = ctx.basicForStatement().forUpdate().text;
+        if(update.includes("--")){
+            update = "-1";
+        }else if (update.includes("++")) {
+            update = "1";
+        }else if (update.includes("+")) {
+            update = update.substring(2);
+        }else if (update.includes("-")){
+            update = "-" + update.substring(2);
+        }
+        var forTranslated = temp + "for " + variable + " in range("+init+","+evalu+","+update+"):\n";
+        this.numTabs += 1;
+        this.addToArray(forTranslated);
+    }
+
+    exitForStatement(ctx: ForStatementContext) {
+        this.numTabs -= 1;
+        this.inFor = false;
+    }
+
+    enterRelationalExpression (ctx: RelationalExpressionContext) {
+        this.condFor -= 1;
+        if (this.inIf && ctx.shiftExpression()) {
+            if (ctx.children[1]) {
+                this.addToArray(ctx.relationalExpression().shiftExpression().additiveExpression().multiplicativeExpression().unaryExpression().unaryExpressionNotPlusMinus().postfixExpression().expressionName().text 
+                + " " +ctx.children[1].text + " ")
+            }
+        }
+    }
+
+    enterEqualityExpression (ctx: EqualityExpressionContext){
+        if (this.inIf && ctx.equalityExpression()) {
+            if (ctx.children[1]) {
+                this.addToArray(ctx.equalityExpression().relationalExpression().shiftExpression().additiveExpression().multiplicativeExpression().unaryExpression().unaryExpressionNotPlusMinus().postfixExpression().expressionName().text 
+                + " " +ctx.children[1].text + " ")
+            }
+        }
     }
 
     visitTerminal(node: TerminalNode) {
