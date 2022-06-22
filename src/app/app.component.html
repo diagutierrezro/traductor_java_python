@@ -1,0 +1,31 @@
+<div class="center">
+  <h1>TRADUCTOR JAVA A PYTHON</h1>
+</div>
+<form [formGroup]="traductor">
+  <div class="container">
+
+    <div class="form-group row">
+      <div class="col-md-4">
+        <textarea matInput formControlName="texto" placeholder="Ingrese su codigo en java" cols="180" rows="10"></textarea>
+        <!-- <ngx-monaco-editor
+          style="height: 100%; width: 100%; text-align: left;"
+          [options]=" { language: 'xml', fontSize: 20 }"
+          [(ngModel)]="code"
+        ></ngx-monaco-editor> -->
+      </div>
+      <p></p>
+      <mat-divider></mat-divider>
+      <p></p>
+      <button mat-button color="accent" (click)="traducir()">TRADUCIR</button>
+      <p></p>
+      <div class="col-md-4">
+        <textarea class="form-control" formControlName="textoTraducido" cols="180" rows="10"></textarea>
+        <!-- <ngx-monaco-editor
+          style="height: 100%; width: 100%; text-align: left;"
+          [options]="editorOptions"
+          [ngModel]="code | parse"
+        ></ngx-monaco-editor> -->
+      </div>
+    </div>
+  </div>
+</form>
