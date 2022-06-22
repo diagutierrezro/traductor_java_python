@@ -10,6 +10,7 @@ import { AdditiveExpressionContext, ArgumentListContext, AssignmentContext, Clas
 export class SL2Java {
 
     inArray: boolean = false;
+    inPrint: boolean = false;
     inFor: boolean = false;
     inAsignacion: boolean = false;
     inMasParametros: boolean = false;
@@ -51,6 +52,7 @@ export class SL2Java {
     noAssign:boolean = false;
     condFor: number = 0;
     inIf: boolean = false;
+    readString: boolean = false;
 
     constructor() {
     }
@@ -260,7 +262,7 @@ export class SL2Java {
         for (let index = 0; index < this.numTabs; index++) {
             temp = temp + "\t"
         }
-        this.addToArray(temp + ctx.typeName().text + ".")
+        if (ctx.typeName().text !== "System.out") this.addToArray(temp + ctx.typeName().text + ".")
         if(ctx.Identifier().text === "push") {
             this.inArray = true;
             this.addToArray("append(")
@@ -277,7 +279,9 @@ export class SL2Java {
         this.removeArray = false;
         this.inArray = false;
         this.getArray = false;
-        this.addToArray(")\n")
+        if (!this.inPrint){
+            this.addToArray(")\n")
+        }
     }
 
     enterMethodInvocation_lfno_primary(ctx: MethodInvocation_lfno_primaryContext) {
@@ -291,8 +295,10 @@ export class SL2Java {
             this.removeArray = false;
         } else if (ctx.Identifier().text === "parseInt") {
             this.addToArray("int(")
+            this.readString = true;
         } else if (ctx.Identifier().text === "parseFloat") {
             this.addToArray("float(")
+            this.readString = true;
         } else if (ctx.typeName().text === this.scannerIdentifier) {
         } else {
             this.getArray = true;
@@ -302,7 +308,12 @@ export class SL2Java {
 
     enterTypeName(ctx: TypeNameContext){
         if(ctx.Identifier().text === this.scannerIdentifier){
-            this.addToArray("input())");
+            if (!this.readString) {
+                this.addToArray("input()")
+            } else {
+                this.addToArray("input())");
+                this.readString = false;
+            }
         }
     }
 
@@ -314,7 +325,8 @@ export class SL2Java {
     }
 
     enterArgumentList(ctx: ArgumentListContext){
-        if(ctx.parent.text === "println"){
+        if(ctx.parent.text.includes("println")){
+            this.inPrint = true;
             var temp = "";
             for (let index = 0; index < this.numTabs; index++) {
                 temp = temp + "\t"
