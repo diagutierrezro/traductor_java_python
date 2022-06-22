@@ -8,8 +8,6 @@
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e",
-    "antlr4ts": "antlr4ts -visitor ./src/app/antlr/grammar/SL.g4",
-    "antlr4ts1": "antlr4ts -visitor ./src/app/antlr/grammar/SL_Grammar.g4",
     "antlr4ts2": "antlr4ts -visitor ./src/app/antlr/grammar/Java8Lexer.g4",
     "antlr4ts3": "antlr4ts -visitor ./src/app/antlr/grammar/Java8Parser.g4"
   },
