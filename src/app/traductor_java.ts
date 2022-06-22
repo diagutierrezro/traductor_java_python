@@ -1,6 +1,6 @@
 import { ErrorNode } from "antlr4ts/tree/ErrorNode";
 import { TerminalNode } from "antlr4ts/tree/TerminalNode";
-import { AdditiveExpressionContext, ArgumentListContext, ClassBodyContext, ClassBodyDeclarationContext, ClassDeclarationContext, CompilationUnitContext,
+import { AdditiveExpressionContext, ArgumentListContext, AssignmentContext, ClassBodyContext, ClassBodyDeclarationContext, ClassDeclarationContext, CompilationUnitContext,
     ExpressionNameContext, FieldDeclarationContext, FormalParameterContext, FormalParameterListContext, FormalParametersContext, IfThenElseStatementContext,
     IfThenStatementContext, Java8Parser, LiteralContext, MethodBodyContext, MethodDeclaratorContext, MethodInvocationContext, MethodInvocation_lfno_primaryContext,
     MethodNameContext, NormalClassDeclarationContext, ReturnStatementContext, TypeNameContext, UnannClassType_lfno_unannClassOrInterfaceTypeContext,
@@ -38,6 +38,8 @@ export class SL2Java {
     plusOperator: boolean = false;
     numOfAdditiveExpression: number = 0;
     comaOnArguments: boolean = false;
+    instanceVariable: boolean = false;
+    assignVariable:boolean = false;
 
     constructor() {
     }
@@ -126,13 +128,15 @@ export class SL2Java {
         for (let index = 0; index < this.numTabs; index++) {
             temp = temp + "\t"
         }
-        if (!this.inArray && !ctx.text.includes("Scanner") ){
-            this.addToArray(temp + ctx.variableDeclaratorId().Identifier().text + " " + ctx.ASSIGN().text + " ")
+        if (!this.inArray && !ctx.text.includes("Scanner") && ctx.ASSIGN()){
+            this.addToArray(temp + ctx.variableDeclaratorId().Identifier().text + " " + ctx.ASSIGN().text + " ");
+        } else if (this.instanceVariable) {
+            this.addToArray(ctx.variableDeclaratorId().Identifier().text);
         }
     }
 
     exitVariableDeclarator(ctx: VariableDeclaratorContext) {
-        if (!this.inArray) {
+        if (!this.inArray && !this.instanceVariable) {
             this.addToArray("\n")
         }
     }
@@ -142,6 +146,10 @@ export class SL2Java {
             this.addToArray(ctx.IntegerLiteral().text)
         } else if (ctx.StringLiteral()) {
             this.addToArray(ctx.StringLiteral().text)
+        } else if (ctx.FloatingPointLiteral().text) {
+            this.addToArray(ctx.FloatingPointLiteral().text)
+        } else if (ctx.BooleanLiteral().text) {
+            this.addToArray(ctx.BooleanLiteral().text)
         }
     }
 
@@ -167,7 +175,8 @@ export class SL2Java {
     }
 
     exitAdditiveExpression(ctx: AdditiveExpressionContext){
-        this.numOfAdditiveExpression -= 1;
+        if (this.plusOperator) this.numOfAdditiveExpression -= 1;
+        console.log(this.numOfAdditiveExpression)
         if(this.numOfAdditiveExpression == 0){
             this.plusOperator = false;
         }
@@ -315,7 +324,7 @@ export class SL2Java {
         this.addToArray(temp);
     }
 
-    enterMethodDeclarator(ctx: MethodDeclaratorContext){
+    enterMethodDeclarator(ctx: MethodDeclaratorContext) {
         var temp = ""
         for (let index = 0; index < this.numTabs; index++) {
             temp = temp + "\t"
@@ -325,6 +334,46 @@ export class SL2Java {
         }
         temp = temp + "def " + ctx.Identifier().text + "(";
         this.addToArray(temp)
+    }
+
+    enterFieldDeclaration(ctx: FieldDeclarationContext) {
+        var temp = ""
+        for (let index = 0; index < this.numTabs; index++) {
+            temp = temp + "\t"
+        }
+        this.addToArray(temp)
+        this.instanceVariable = true;
+        if (ctx.fieldModifier()[0].text === "private") {
+            this.addToArray("__")
+        } else if (ctx.fieldModifier()[0].text === "protected") {
+            this.addToArray("_")
+        }
+    }
+
+    exitFieldDeclaration(ctx: FieldDeclarationContext) {
+        if (ctx.unannType().text === "String") {
+            this.addToArray(' = ""\n')
+        } else if (ctx.unannType().text === "boolean") {
+            this.addToArray(' = false\n')
+        } else if( ctx.unannType().text === "int") {
+            this.addToArray(' = 0\n')
+        } else if( ctx.unannType().text === "float") {
+            this.addToArray(' = 0.0\n')
+        }
+        this.instanceVariable = false;
+    }
+
+    enterAssignment (ctx: AssignmentContext) {
+        var temp = ""
+        for (let index = 0; index < this.numTabs; index++) {
+            temp = temp + "\t"
+        }
+        this.assignVariable = true;
+        this.addToArray(temp + ctx.leftHandSide().fieldAccess().Identifier().text + " = ")
+    }
+
+    exitAssignment (ctx: AssignmentContext) {
+        this.addToArray("\n")
     }
 
     visitTerminal(node: TerminalNode) {
